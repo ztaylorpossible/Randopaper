@@ -1,16 +1,29 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <windows.h>
 #include <fileapi.h>
+
 #include "randopaper.h"
 
 int main(int argc, char *argv[])
 {
+    srand(time(NULL));
+
     for (int i = 0; i < argc; i++)
     {
-        if (strcmp(argv[i], "-s") == 0 && i + 1 < argc && check_file(argv[i + 1]))
+        if (strcmp(argv[i], "-s") == 0 && i + 1 < argc)
         {
-            set_file(argv[i + 1]);
+            file_type ft = check_file(argv[i + 1]);
+            if (ft == FT_DIRECTORY)
+            {
+                set_dir(argv[i + 1]);
+            }
+            else if (ft == FT_FILE)
+            {
+                set_file(argv[i + 1]);
+            }
             i++;
         }
         else if (strcmp(argv[i], "-g") == 0)
@@ -59,24 +72,30 @@ int validate_extension(char *file_path)
     return 0;
 }
 
-int check_file(char *file_path)
+file_type check_file(char *file_path)
 {
     WIN32_FIND_DATA find_data;
     HANDLE file_handle = FindFirstFileA(file_path, &find_data);
     if (file_handle == INVALID_HANDLE_VALUE)
     {
         FindClose(file_handle);
-        return 0;
+        return FT_NONE;
+    }
+
+    if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+    {
+        FindClose(file_handle);
+        return FT_DIRECTORY;
     }
 
     if (validate_extension(file_path))
     {
         FindClose(file_handle);
-        return 1;
+        return FT_FILE;
     }
 
     FindClose(file_handle);
-    return 0;
+    return FT_NONE;
 }
 
 void set_file(char *file_path)
@@ -86,6 +105,39 @@ void set_file(char *file_path)
                           0,
                           file_path,
                           SPIF_UPDATEINIFILE|SPIF_SENDWININICHANGE);
+}
+
+void set_dir(char *dir_path)
+{
+    char *search_path = (char *)malloc(strlen(dir_path) + 3);
+    strcpy(search_path, dir_path);
+    strcat(search_path, "\\*");
+    strcat(dir_path, "\\");
+
+    WIN32_FIND_DATA find_data;
+    HANDLE file_handle = FindFirstFileA(search_path, &find_data);
+
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        printf("Directory is empty.\n");
+        free(search_path);
+        return;
+    }
+
+    printf("Getting files...\n");
+    do
+    {
+        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 && validate_extension(find_data.cFileName))
+        {
+            char *full_path = (char *)malloc(strlen(dir_path) + strlen(find_data.cFileName) + 1);
+            strcpy(full_path, dir_path);
+            strcat(full_path, find_data.cFileName);
+            printf("File: %s\n", full_path);
+            free(full_path);
+        }
+    } while (FindNextFile(file_handle, &find_data));
+    free(search_path);
+    FindClose(file_handle);
 }
 
 void get_file()

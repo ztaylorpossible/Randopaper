@@ -108,16 +108,19 @@ void set_file(char *file_path)
                           SPIF_UPDATEINIFILE|SPIF_SENDWININICHANGE);
 }
 
-void set_dir(char *dir_path)
+void set_dir(char *input_path)
 {
-    char *search_path = (char *)malloc(strlen(dir_path) + 3);
+    char *search_path = (char *)malloc(strlen(input_path) + 3);
+    char *dir_path = (char *)malloc(strlen(input_path) + 2);
     if (search_path == NULL)
     {
+        printf("Failed to allocate search path\n");
         return;
     }
 
-    strcpy(search_path, dir_path);
+    strcpy(search_path, input_path);
     strcat(search_path, "\\*");
+    strcpy(dir_path, input_path);
     strcat(dir_path, "\\");
 
     WIN32_FIND_DATA find_data;
@@ -127,11 +130,11 @@ void set_dir(char *dir_path)
     {
         printf("Directory is empty.\n");
         free(search_path);
+        free(dir_path);
         return;
     }
 
     string_list_t *files = string_list_new();
-    printf("Getting files...\n");
     do
     {
         if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 && validate_extension(find_data.cFileName))
@@ -144,14 +147,18 @@ void set_dir(char *dir_path)
             strcpy(full_path, dir_path);
             strcat(full_path, find_data.cFileName);
             string_list_add(files, full_path);
-            //printf("File: %s\n", full_path);
-            //free(full_path);
         }
     } while (FindNextFile(file_handle, &find_data));
 
-    string_list_display(files);
+    int selection = rand() % files->count;
+    char *file_path = string_list_get_index(files, selection);
+    SystemParametersInfoA(SPI_SETDESKWALLPAPER,
+                          0,
+                          file_path,
+                          SPIF_UPDATEINIFILE|SPIF_SENDWININICHANGE);
 
     free(search_path);
+    free(dir_path);
     string_list_free(files);
     FindClose(file_handle);
 }

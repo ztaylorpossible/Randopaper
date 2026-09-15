@@ -144,3 +144,29 @@ void string_list_display(string_list_t *list)
         current = current->next;
     }
 }
+
+char *string_list_get_index(string_list_t *list, int index)
+{
+    if (list == NULL || list->count <= 0)
+    {
+        return NULL;
+    }
+
+    if (index >= list->count)
+    {
+        index = list->count - 1;
+    }
+
+    if (index < 0)
+    {
+        index = 0;
+    }
+
+    string_list_node_t *selection = list->head;
+    for (int i = 0; i < index; i++)
+    {
+        selection = selection->next;
+    }
+
+    return selection->data;
+}

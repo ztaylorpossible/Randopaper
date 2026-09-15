@@ -20,3 +20,4 @@ void string_list_add(string_list_t *list, char *new_string);
 void string_list_free(string_list_t *list);
 int string_list_contains(string_list_t *list, char *query);
 void string_list_display(string_list_t *list);
+char *string_list_get_index(string_list_t *list, int index);

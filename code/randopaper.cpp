@@ -6,6 +6,7 @@
 #include <fileapi.h>
 
 #include "randopaper.h"
+#include "string_list.h"
 
 int main(int argc, char *argv[])
 {
@@ -110,6 +111,11 @@ void set_file(char *file_path)
 void set_dir(char *dir_path)
 {
     char *search_path = (char *)malloc(strlen(dir_path) + 3);
+    if (search_path == NULL)
+    {
+        return;
+    }
+
     strcpy(search_path, dir_path);
     strcat(search_path, "\\*");
     strcat(dir_path, "\\");
@@ -124,19 +130,29 @@ void set_dir(char *dir_path)
         return;
     }
 
+    string_list_t *files = string_list_new();
     printf("Getting files...\n");
     do
     {
         if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 && validate_extension(find_data.cFileName))
         {
             char *full_path = (char *)malloc(strlen(dir_path) + strlen(find_data.cFileName) + 1);
+            if (full_path == NULL)
+            {
+                continue;
+            }
             strcpy(full_path, dir_path);
             strcat(full_path, find_data.cFileName);
-            printf("File: %s\n", full_path);
-            free(full_path);
+            string_list_add(files, full_path);
+            //printf("File: %s\n", full_path);
+            //free(full_path);
         }
     } while (FindNextFile(file_handle, &find_data));
+
+    string_list_display(files);
+
     free(search_path);
+    string_list_free(files);
     FindClose(file_handle);
 }
 

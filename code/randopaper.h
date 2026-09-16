@@ -19,3 +19,4 @@ void set_file(char *file_path);
 void set_dir(char *file_path);
 void get_file(void);
 void list_files(char *dir_path);
+void add_dir(char *dir_path);

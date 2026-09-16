@@ -4,6 +4,7 @@
 #include <time.h>
 #include <windows.h>
 #include <fileapi.h>
+#include <processenv.h>
 
 #include "randopaper.h"
 #include "string_list.h"
@@ -34,6 +35,11 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[i], "-l") == 0 && i + 1 < argc)
         {
             list_files(argv[i + 1]);
+            i++;
+        }
+        else if (strcmp(argv[i], "-a") == 0 && i + 1 < argc)
+        {
+            add_dir(argv[i + 1]);
             i++;
         }
     }
@@ -117,6 +123,12 @@ void set_dir(char *input_path)
         printf("Failed to allocate search path\n");
         return;
     }
+    if (dir_path == NULL)
+    {
+        printf("Failed to allocate dir path\n");
+        free(search_path);
+        return;
+    }
 
     strcpy(search_path, input_path);
     strcat(search_path, "\\*");
@@ -131,6 +143,7 @@ void set_dir(char *input_path)
         printf("Directory is empty.\n");
         free(search_path);
         free(dir_path);
+        FindClose(file_handle);
         return;
     }
 
@@ -178,12 +191,14 @@ void list_files(char *dir_path)
     if (file_handle == INVALID_HANDLE_VALUE)
     {
         printf("Invalid path\n");
+        FindClose(file_handle);
         return;
     }
 
     if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
     {
         printf("Path is not a directory\n");
+        FindClose(file_handle);
         return;
     }
 
@@ -192,16 +207,55 @@ void list_files(char *dir_path)
     if (file_handle == INVALID_HANDLE_VALUE)
     {
         printf("Directory is empty.\n");
+        FindClose(file_handle);
         return;
     }
 
     printf("Getting files...\n");
     do
     {
-        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 && validate_extension(find_data.cFileName))
+        //if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 && validate_extension(find_data.cFileName))
+        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
         {
             printf("File: %s\n", find_data.cFileName);
         }
+        else
+        {
+            printf("Directory: %s\n", find_data.cFileName);
+        }
     } while (FindNextFile(file_handle, &find_data));
+    FindClose(file_handle);
+}
+
+void add_dir(char *dir_path)
+{
+    printf("Adding directory: %s\n", dir_path);
+    WIN32_FIND_DATA find_data;
+    HANDLE file_handle = FindFirstFileA(dir_path, &find_data);
+    if (file_handle == INVALID_HANDLE_VALUE || ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0))
+    {
+        printf("Invalid directory\n");
+        FindClose(file_handle);
+        return;
+    }
+    FindClose(file_handle);
+
+    char *env_appdata = "%appdata%";
+    char appdata[MAX_PATH];
+    ExpandEnvironmentStringsA(env_appdata, appdata, MAX_PATH);
+    char *randopaper_dir = "\\Randopaper";
+    if (strlen(appdata) + strlen(randopaper_dir) + 1 > MAX_PATH)
+    {
+        printf("AppData path too long\n");
+        FindClose(file_handle);
+        return;
+    }
+    strcat(appdata, randopaper_dir);
+
+    file_handle = FindFirstFileA(appdata, &find_data);
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        int result = CreateDirectoryA(appdata, NULL);
+    }
     FindClose(file_handle);
 }

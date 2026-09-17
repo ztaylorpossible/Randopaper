@@ -285,4 +285,5 @@ void add_dir(char *dir_path)
     WriteFile(file_handle, write_dir, strlen(write_dir), &bytes_written, NULL);
 
     CloseHandle(file_handle);
+    free(write_dir);
 }

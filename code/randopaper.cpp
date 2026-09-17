@@ -214,7 +214,6 @@ void list_files(char *dir_path)
     printf("Getting files...\n");
     do
     {
-        //if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 && validate_extension(find_data.cFileName))
         if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
         {
             printf("File: %s\n", find_data.cFileName);
@@ -229,7 +228,6 @@ void list_files(char *dir_path)
 
 void add_dir(char *dir_path)
 {
-    printf("Adding directory: %s\n", dir_path);
     WIN32_FIND_DATA find_data;
     HANDLE file_handle = FindFirstFileA(dir_path, &find_data);
     if (file_handle == INVALID_HANDLE_VALUE || ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0))
@@ -258,4 +256,33 @@ void add_dir(char *dir_path)
         int result = CreateDirectoryA(appdata, NULL);
     }
     FindClose(file_handle);
+
+    char *env_filepath = "%appdata%\\Randopaper\\directories.txt";
+    char filepath[MAX_PATH];
+    ExpandEnvironmentStringsA(env_filepath, filepath, MAX_PATH);
+    file_handle = CreateFileA(filepath, FILE_APPEND_DATA, FILE_SHARE_READ,
+                              NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(file_handle);
+        printf("Failed to open or create file.\n");
+        return;
+    }
+
+    char *write_dir = (char *)malloc(strlen(dir_path) + 2);
+    if (write_dir == NULL)
+    {
+        printf("Failed memory allocation for writing directory.\n");
+        CloseHandle(file_handle);
+        return;
+    }
+
+    strcpy(write_dir, dir_path);
+    strcat(write_dir, "\n");
+
+    DWORD bytes_written;
+    WriteFile(file_handle, write_dir, strlen(write_dir), &bytes_written, NULL);
+
+    CloseHandle(file_handle);
 }

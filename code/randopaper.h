@@ -13,6 +13,7 @@ char *valid_extensions[] = {
 const int buffer_size = MAX_PATH;
 char read_buffer[buffer_size];
 
+void select_random(void);
 int validate_extention(char *file_path);
 file_type check_file(char *file_path);
 void set_file(char *file_path);

@@ -13,6 +13,12 @@ int main(int argc, char *argv[])
 {
     srand(time(NULL));
 
+    if (argc < 2)
+    {
+        select_random();
+        return 0;
+    }
+
     for (int i = 0; i < argc; i++)
     {
         if (strcmp(argv[i], "-s") == 0 && i + 1 < argc)
@@ -43,6 +49,44 @@ int main(int argc, char *argv[])
             i++;
         }
     }
+}
+
+void select_random(void)
+{
+    printf("Selecting random file...\n");
+
+    HANDLE file_handle;
+    char *env_filepath = "%appdata%\\Randopaper\\directories.txt";
+    char filepath[MAX_PATH];
+    ExpandEnvironmentStringsA(env_filepath, filepath, MAX_PATH);
+    file_handle = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ,
+                              NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(file_handle);
+        printf("Failed to open file.\n");
+        return;
+    }
+
+    LARGE_INTEGER file_size;
+    GetFileSizeEx(file_handle, &file_size);
+    char *file_read_buffer = (char *)malloc(file_size.QuadPart);
+
+    if (file_read_buffer == NULL)
+    {
+        printf("Failed to allocate file read buffer.\n");
+        CloseHandle(file_handle);
+        return;
+    }
+    *file_read_buffer = NULL;
+
+    DWORD bytes_read;
+    ReadFile(file_handle, file_read_buffer, file_size.QuadPart - 1, &bytes_read, NULL);
+    printf("File output:\n%s\nEnd of file output.\n", file_read_buffer);
+
+    CloseHandle(file_handle);
+    free(file_read_buffer);
 }
 
 int validate_extension(char *file_path)

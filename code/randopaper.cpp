@@ -53,8 +53,6 @@ int main(int argc, char *argv[])
 
 void select_random(void)
 {
-    printf("Selecting random file...\n");
-
     HANDLE file_handle;
     char *env_filepath = "%appdata%\\Randopaper\\directories.txt";
     char filepath[MAX_PATH];
@@ -77,14 +75,78 @@ void select_random(void)
     {
         printf("Failed to allocate file read buffer.\n");
         CloseHandle(file_handle);
+        free(file_read_buffer);
         return;
     }
     *file_read_buffer = NULL;
 
     DWORD bytes_read;
     ReadFile(file_handle, file_read_buffer, file_size.QuadPart - 1, &bytes_read, NULL);
-    printf("File output:\n%s\nEnd of file output.\n", file_read_buffer);
 
+    string_list_t *directory_list = string_list_new();
+    char *current = file_read_buffer;
+    int counter = 0;
+    while(*(current + counter) != '\0')
+    {
+        counter++;
+        if (*(current + counter) == '\n' || *(current + counter) == '\0')
+        {
+            char directory[MAX_PATH];
+            strncpy(directory, current, counter);
+            string_list_add(directory_list, directory);
+            if (*(current + counter) == '\n')
+            {
+                current++;
+            }
+            current += counter;
+            counter = 0;
+        }
+    }
+
+    string_list_t *file_list = string_list_new();
+    for (int i = 0; i < directory_list->count; i++)
+    {
+        char *directory = string_list_get_index(directory_list, i);
+        char *dir_search_path = (char *)malloc(strlen(directory) + 3);
+        strcpy(dir_search_path, directory);
+        strcat(dir_search_path, "\\*");
+
+        WIN32_FIND_DATA find_data;
+        file_handle = FindFirstFileA(dir_search_path, &find_data);
+        if (file_handle == INVALID_HANDLE_VALUE)
+        {
+            printf("Directory %s is empty.\n", dir_search_path);
+            FindClose(file_handle);
+            free(dir_search_path);
+            continue;
+        }
+
+        do
+        {
+            if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0
+                && validate_extension(find_data.cFileName))
+            {
+                char *full_path = (char *)malloc(strlen(directory) + strlen(find_data.cFileName) + 2);
+                strcpy(full_path, directory);
+                strcat(full_path, "\\");
+                strcat(full_path, find_data.cFileName);
+                string_list_add(file_list, full_path);
+                free(full_path);
+            }
+        } while (FindNextFile(file_handle, &find_data));
+
+        free(dir_search_path);
+    }
+
+    int selection = rand() % file_list->count;
+    char *file_path = string_list_get_index(file_list, selection);
+    SystemParametersInfoA(SPI_SETDESKWALLPAPER,
+                          0,
+                          file_path,
+                          SPIF_UPDATEINIFILE|SPIF_SENDWININICHANGE);
+
+    string_list_free(directory_list);
+    string_list_free(file_list);
     CloseHandle(file_handle);
     free(file_read_buffer);
 }

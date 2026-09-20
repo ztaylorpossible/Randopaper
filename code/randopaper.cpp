@@ -7,7 +7,6 @@
 #include <processenv.h>
 
 #include "randopaper.h"
-#include "string_list.h"
 
 int main(int argc, char *argv[])
 {
@@ -38,14 +37,22 @@ int main(int argc, char *argv[])
         {
             get_file();
         }
-        else if (strcmp(argv[i], "-l") == 0 && i + 1 < argc)
+        else if (strcmp(argv[i], "-o") == 0)
         {
-            list_files(argv[i + 1]);
+        }
+        else if (strcmp(argv[i], "-l") == 0)
+        {
+            list_dirs();
             i++;
         }
         else if (strcmp(argv[i], "-a") == 0 && i + 1 < argc)
         {
             add_dir(argv[i + 1]);
+            i++;
+        }
+        else if (strcmp(argv[i], "-r") == 0 && i + 1 < argc)
+        {
+            remove_dir(argv[i + 1]);
             i++;
         }
     }
@@ -290,46 +297,16 @@ void get_file()
     validate_extension(read_buffer);
 }
 
-void list_files(char *dir_path)
+void list_dirs()
 {
-    WIN32_FIND_DATA find_data;
-    HANDLE file_handle = FindFirstFileA(dir_path, &find_data);
-    if (file_handle == INVALID_HANDLE_VALUE)
+    string_list_t *directory_list = get_dir_string_list();
+    if (directory_list == NULL)
     {
-        printf("Invalid path\n");
-        FindClose(file_handle);
         return;
     }
 
-    if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-    {
-        printf("Path is not a directory\n");
-        FindClose(file_handle);
-        return;
-    }
-
-    strcat(dir_path, "\\*");
-    file_handle = FindFirstFileA(dir_path, &find_data);
-    if (file_handle == INVALID_HANDLE_VALUE)
-    {
-        printf("Directory is empty.\n");
-        FindClose(file_handle);
-        return;
-    }
-
-    printf("Getting files...\n");
-    do
-    {
-        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-        {
-            printf("File: %s\n", find_data.cFileName);
-        }
-        else
-        {
-            printf("Directory: %s\n", find_data.cFileName);
-        }
-    } while (FindNextFile(file_handle, &find_data));
-    FindClose(file_handle);
+    string_list_display(directory_list);
+    string_list_free(directory_list);
 }
 
 void add_dir(char *dir_path)
@@ -392,4 +369,74 @@ void add_dir(char *dir_path)
 
     CloseHandle(file_handle);
     free(write_dir);
+}
+
+void remove_dir(char *dir_path)
+{
+
+}
+
+string_list_t *get_dir_string_list()
+{
+    HANDLE file_handle;
+    char env_filepath[] = "%appdata%\\Randopaper\\directories.txt";
+    char filepath[MAX_PATH];
+    ExpandEnvironmentStringsA(env_filepath, filepath, MAX_PATH);
+    file_handle = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ,
+                              NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(file_handle);
+        printf("Failed to retrieve directories");
+        return NULL;
+    }
+
+    LARGE_INTEGER file_size;
+    GetFileSizeEx(file_handle, &file_size);
+    char *file_read_buffer = (char *)malloc(file_size.QuadPart);
+
+    if (file_read_buffer == NULL)
+    {
+        printf("Failed to allocate file read buffer.\n");
+        CloseHandle(file_handle);
+        free(file_read_buffer);
+        return NULL;
+    }
+    *file_read_buffer = NULL;
+
+    DWORD bytes_read;
+    ReadFile(file_handle, file_read_buffer, file_size.QuadPart - 1, &bytes_read, NULL);
+
+    string_list_t *directory_list = string_list_new();
+    if (directory_list == NULL)
+    {
+        printf("Failed to initialize string list for directories.\n");
+        CloseHandle(file_handle);
+        free(file_read_buffer);
+        return NULL;
+    }
+
+    char *current = file_read_buffer;
+    int counter = 0;
+    while(*(current + counter) != '\0')
+    {
+        counter++;
+        if (*(current + counter) == '\n' || *(current + counter) == '\0')
+        {
+            char directory[MAX_PATH];
+            strncpy(directory, current, counter);
+            string_list_add(directory_list, directory);
+            if (*(current + counter) == '\n')
+            {
+                current++;
+            }
+            current += counter;
+            counter = 0;
+        }
+    }
+
+    free(file_read_buffer);
+    FindClose(file_handle);
+    return directory_list;
 }

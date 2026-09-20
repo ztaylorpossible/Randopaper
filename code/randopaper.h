@@ -1,3 +1,5 @@
+#include "string_list.h"
+
 typedef enum FileType {
     FT_NONE = 0,
     FT_DIRECTORY = 1,
@@ -19,5 +21,7 @@ file_type check_file(char *file_path);
 void set_file(char *file_path);
 void set_dir(char *file_path);
 void get_file(void);
-void list_files(char *dir_path);
+void list_dirs();
 void add_dir(char *dir_path);
+void remove_dir(char *dir_path);
+string_list_t *get_dir_string_list();

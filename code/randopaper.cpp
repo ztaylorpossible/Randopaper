@@ -305,7 +305,10 @@ void list_dirs()
         return;
     }
 
-    string_list_display(directory_list);
+    for (int i = 0; i < directory_list->count; i++)
+    {
+        printf("%d: %s\n", i, string_list_get_index(directory_list, i));
+    }
     string_list_free(directory_list);
 }
 

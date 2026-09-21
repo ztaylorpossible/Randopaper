@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
         }
         else if (strcmp(argv[i], "-o") == 0)
         {
+            open_appdata();
         }
         else if (strcmp(argv[i], "-l") == 0)
         {
@@ -500,4 +501,13 @@ string_list_t *get_dir_string_list()
     CloseHandle(file_handle);
 
     return directory_list;
+}
+
+void open_appdata(void)
+{
+    HANDLE file_handle;
+    char env_filepath[] = "%appdata%\\Randopaper";
+    char filepath[MAX_PATH];
+    ExpandEnvironmentStringsA(env_filepath, filepath, MAX_PATH);
+    ShellExecuteA(NULL, "explore", filepath, NULL, NULL, SW_SHOWNORMAL);
 }

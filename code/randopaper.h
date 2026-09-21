@@ -25,3 +25,4 @@ void list_dirs();
 void add_dir(char *dir_path);
 void remove_dir(char *index_string);
 string_list_t *get_dir_string_list();
+void open_appdata(void);

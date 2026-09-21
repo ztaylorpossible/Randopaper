@@ -28,7 +28,7 @@ void string_list_add(string_list_t *list, char *new_string)
     {
         return;
     }
-    new_node->data = (char *)malloc(sizeof(char *) * strlen(new_string) + 1);
+    new_node->data = (char *)malloc(strlen(new_string) + 1);
     if (new_node->data == NULL)
     {
         free(new_node);
@@ -55,6 +55,55 @@ void string_list_add(string_list_t *list, char *new_string)
     }
 
     list->count++;
+}
+
+void string_list_remove(string_list_t *list, int index)
+{
+    if (list == NULL || list->count <= 0)
+    {
+        return;
+    }
+
+    string_list_node_t *to_remove;
+    if (index <= 0 || list->count == 1)
+    {
+        to_remove = list->head;
+        list->head = list->head->next;
+        if (list->head != NULL)
+        {
+            list->head->prev = NULL;
+        }
+        list->count--;
+        to_remove->next = NULL;
+        free(to_remove->data);
+        free(to_remove);
+        return;
+    }
+
+    if (index >= list->count)
+    {
+        index = list->count - 1;
+    }
+
+    to_remove = list->head;
+    for (int i = 0; i < index; i++)
+    {
+        if (to_remove->next == NULL)
+        {
+            break;
+        }
+        to_remove = to_remove->next;
+    }
+    if (to_remove->next != NULL)
+    {
+        to_remove->next->prev = to_remove->prev;
+    }
+    to_remove->prev->next = to_remove->next;
+    to_remove->next = NULL;
+    to_remove->prev = NULL;
+    free(to_remove->data);
+    free(to_remove);
+    list->count--;
 }
 
 void string_list_free(string_list_t *list)

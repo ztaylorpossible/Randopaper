@@ -374,9 +374,65 @@ void add_dir(char *dir_path)
     free(write_dir);
 }
 
-void remove_dir(char *dir_path)
+void remove_dir(char *index_string)
 {
+    if (index_string == NULL)
+    {
+        return;
+    }
 
+    string_list_t *directory_list = get_dir_string_list();
+    if (directory_list == NULL)
+    {
+        return;
+    }
+    int index = atoi(index_string);
+    string_list_remove(directory_list, index);
+
+    HANDLE file_handle;
+    char env_filepath[] = "%appdata%\\Randopaper\\directories.txt";
+    char filepath[MAX_PATH];
+    ExpandEnvironmentStringsA(env_filepath, filepath, MAX_PATH);
+    DeleteFileA(filepath);
+    if (directory_list->count <= 0)
+    {
+        free(directory_list);
+        return;
+    }
+
+    file_handle = CreateFileA(filepath, FILE_APPEND_DATA, FILE_SHARE_READ,
+                              NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(file_handle);
+        free(directory_list);
+        printf("Failed to open or create file.\n");
+        return;
+    }
+
+    for (int i = 0; i < directory_list->count; i++)
+    {
+        DWORD bytes_written;
+        char *dir = string_list_get_index(directory_list, i);
+        char *write_dir = (char *)malloc(strlen(dir) + 2);
+        if (write_dir == NULL)
+        {
+            printf("Failed memory allocation for writing directory.\n");
+            CloseHandle(file_handle);
+            free(directory_list);
+            return;
+        }
+
+        strcpy(write_dir, dir);
+        strcat(write_dir, "\n");
+
+        WriteFile(file_handle, write_dir, strlen(write_dir), &bytes_written, NULL);
+        free(write_dir);
+    }
+
+    CloseHandle(file_handle);
+    free(directory_list);
 }
 
 string_list_t *get_dir_string_list()
@@ -429,6 +485,7 @@ string_list_t *get_dir_string_list()
         {
             char directory[MAX_PATH];
             strncpy(directory, current, counter);
+            directory[counter] = '\0';
             string_list_add(directory_list, directory);
             if (*(current + counter) == '\n')
             {
@@ -440,6 +497,7 @@ string_list_t *get_dir_string_list()
     }
 
     free(file_read_buffer);
-    FindClose(file_handle);
+    CloseHandle(file_handle);
+
     return directory_list;
 }
